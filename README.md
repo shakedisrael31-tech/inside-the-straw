@@ -82,6 +82,17 @@ One environment is supported: **MicroPython, using the official editor**.
 
 You can reopen this screen at any time from Pause, then Settings. If the cable comes out mid-game, the game pauses and offers to reconnect or to carry on with the keyboard.
 
+### Optional: a wireless hand controller (two micro:bits)
+
+Wired to the computer, the micro:bit you hold is on the end of a USB cable. With a second micro:bit you can make the one you hold fully wireless, on just a battery pack, while the other stays plugged into the computer and does nothing but relay:
+
+1. Flash [`firmware/inside_the_straw_remote.py`](firmware/inside_the_straw_remote.py) onto the micro:bit the player holds (the one on battery power). This is the one you tilt and press buttons on.
+2. Flash [`firmware/inside_the_straw_base.py`](firmware/inside_the_straw_base.py) onto the micro:bit that stays plugged into the computer by USB. It does not read its own tilt or buttons at all - it only listens on the radio and repeats what it hears straight over the serial connection, in the exact same line format the wired firmware uses, so the game itself needs no changes.
+3. Both files have a `CHANNEL = 42` line near the top - it must be the **same number** on both, or they won't hear each other. Only change it (to any number 0-83) if another micro:bit radio project nearby is already using channel 42.
+4. In the game, connect to the **base** micro:bit (the wired one) exactly as in the single-micro:bit setup above.
+
+Typical indoor range is on the order of 10-20 metres, plenty for a desk or a living room.
+
 ### Browser requirements
 
 The micro:bit link uses the Web Serial API. It needs:
