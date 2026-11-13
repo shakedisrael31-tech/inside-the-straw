@@ -1,0 +1,27 @@
+{
+  "name": "inside-the-straw",
+  "version": "1.0.0",
+  "description": "Inside the Straw - a small 3D browser game set inside paper drinking straws",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/three": "^0.187.0",
+    "@types/w3c-web-serial": "^1.0.9",
+    "playwright": "^1.65.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "type": "module",
+  "private": true
+}
