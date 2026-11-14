@@ -154,9 +154,12 @@ const FRAG_COLOR = /* glsl */ `
   col *= 1.0 - 0.18 * seam - 0.04 * lip;
   if (vFace < 0.5) col *= vec3(1.0, 0.98, 0.945);
   col *= vShade * (0.9 + 0.2 * fib.r) * (0.93 + 0.14 * grain) * mix(vec3(1.0), vec3(1.0, 0.965, 0.9), clamp((fib2.g - 0.42) * 3.0, 0.0, 1.0));
-  if (vFace > 1.5) col = vec3(0.9, 0.84, 0.72) * (0.85 + 0.3 * fib.r);
+  // exposed wall thickness (cut or torn): warm white/cream paper, with fibre breaking up what would
+  // otherwise read as a flat, too-perfect tan - a cut edge stays a little cleaner on average than a
+  // torn one, which gets its own whiter, more broken-up treatment just below via evRim
+  if (vFace > 1.5) col = mix(vec3(0.96, 0.93, 0.85), vec3(0.8, 0.72, 0.57), smoothstep(0.2, 0.8, fib.r)) * (0.88 + 0.24 * grain);
   col *= 1.0 - 0.45 * evCrease;
-  if (evRim > 0.5) col = vec3(0.86, 0.79, 0.66) * (0.85 + 0.3 * fib.r);
+  if (evRim > 0.5) col = mix(vec3(0.97, 0.95, 0.89), vec3(0.83, 0.76, 0.61), smoothstep(0.15, 0.85, fib.r)) * (0.9 + 0.22 * grain);
   // the pursuing front has its own look: a frayed, slightly scorched-kraft edge just ahead of where the wall lets go
   if (uCollapse > 0.5) col = mix(col, vec3(0.78, 0.6, 0.38) * (0.8 + 0.4 * grain), 0.55 * smoothstep(-1.4, 0.0, vD) * (1.0 - smoothstep(0.0, 2.5, vD)));
   // looking down a closed straw: the far end sinks into warm shade, which gives the tunnel depth

@@ -78,7 +78,7 @@ describe('movement rules', () => {
     for (let i = 0; i < 240; i++) player.step(DT, idle, finishS);
     expect(player.s).toBeCloseTo(2, 5);
     for (let i = 0; i < 240; i++) player.step(DT, fwd, finishS);
-    expect(player.vu).toBeCloseTo(CONFIG.difficulty.maxSpeed, 3);
+    expect(player.vu).toBeCloseTo(CONFIG.difficulty.maxSpeed * CONFIG.difficulty.pace, 3);
     for (let i = 0; i < 60; i++) player.step(DT, { ...idle, brake: 1 }, finishS);
     expect(player.vu).toBe(0);
   });
@@ -247,10 +247,13 @@ describe('unravelling front', () => {
   it('a steady player stays ahead, hesitation is dangerous, and it never jumps forward', () => {
     const { route, front } = setup();
     const C = CONFIG.collapse;
-    expect(C.speed + C.catchUpBoost).toBeLessThan(CONFIG.difficulty.maxSpeed);
+    expect(C.speed + C.catchUpBoost).toBeLessThan(CONFIG.difficulty.maxSpeed * CONFIG.difficulty.pace);
     front.activate(100);
+    // "steady" here means the same comfortable fraction of top speed as before pacing changed,
+    // not literally 3.7 m/s - it should still outrun the chase if it never pauses.
+    const steadySpeed = 3.7 * CONFIG.difficulty.pace;
     let s = 100 + C.startDistance, maxStep = 0, prev = route.front;
-    for (let i = 0; i < 120 * 40; i++) { s += 3.7 * DT; front.update(DT, s); maxStep = Math.max(maxStep, route.front - prev); prev = route.front; }
+    for (let i = 0; i < 120 * 40; i++) { s += steadySpeed * DT; front.update(DT, s); maxStep = Math.max(maxStep, route.front - prev); prev = route.front; }
     expect(s - route.front).toBeGreaterThan(C.startDistance);          // steady progress keeps the gap
     expect(maxStep).toBeLessThanOrEqual((C.speed + C.catchUpBoost) * DT + 1e-9);
     const gap0 = s - route.front; let t = 0;
@@ -318,7 +321,10 @@ describe('playthroughs (autopilot with keyboard-equivalent controls)', () => {
     expect(r.deaths).toBeLessThanOrEqual(4);
     expect(r.cp).toBe(CHECKPOINTS.length - 1);
     for (const sh of r.route.sheets) expect(r.visited.has(sh.def.id), sh.def.id).toBe(true);
-    expect(r.lateralUsed).toBeGreaterThan(25);     // metres travelled round the wall: a real part of the run
+    // metres (integrated over time) travelled round the wall: a real part of the run. The bar is
+    // lower than it once was because the whole course now finishes faster at the higher pace, which
+    // shortens this time-integral on its own without meaning less wall-steering actually happened.
+    expect(r.lateralUsed).toBeGreaterThan(17);
     expect(r.t).toBeGreaterThan(130); expect(r.t).toBeLessThan(330);
   });
   it('holding forward along the bottom does not get through', () => {

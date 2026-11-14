@@ -10,12 +10,31 @@
  */
 import { BufferGeometry, Float32BufferAttribute, Vector3, Sphere } from 'three';
 import { Frame, type Sheet } from './sheet';
+import { TAU } from '../core/math';
 
 export interface MeshOpts { du: number; da: number; thickness: number; chunk: number }
 export const COURSE_MESH: MeshOpts = { du: 0.4, da: 0.29, thickness: 0.035, chunk: 16 };
 export const WEAVE_MESH: MeshOpts = { du: 0.2, da: 0.2, thickness: 0.05, chunk: 16 };
 export const DECOR_MESH: MeshOpts = { du: 1.1, da: 0.6, thickness: 0.03, chunk: 1e6 };
 export const FAR_MESH: MeshOpts = { du: 2.2, da: 1.0, thickness: 0.03, chunk: 1e6 };
+
+/**
+ * A real cut straw end is never a perfect circle cut square across: the scissors wander a
+ * little, the tube is never quite round, and the paper dents slightly wherever it was
+ * pinched. This gives each open tube end its own small, fixed imperfection - seeded from
+ * the sheet so the two ends of the same straw, and every other straw, each look distinct -
+ * without touching Sheet.sd()/pos(), so collision is untouched: purely how the rim is drawn.
+ *   du  along-the-tube wobble: the cut plane leans rather than sitting dead square
+ *   h   across-the-opening wobble: a touch of oval, plus one small inward pinch
+ */
+function capWarp(sheet: Sheet, a: number, seedEnd: number) {
+  const R = sheet.radius, seed = sheet.index * 7.13 + seedEnd;
+  const th = (a / sheet.circ) * TAU;
+  const du = 0.05 * R * Math.sin(th + seed);
+  const oval = 0.03 * R * Math.cos(2 * th + seed * 0.7);
+  const pinchAt = seed % TAU, pinch = Math.max(0, Math.cos(th - pinchAt) - 0.94) * -0.5 * R;
+  return { du, h: oval + pinch };
+}
 
 const P = new Vector3(), N = new Vector3(), A0 = new Vector3(), B0 = new Vector3(), A1 = new Vector3(), B1 = new Vector3();
 const E1 = new Vector3(), E2 = new Vector3(), G = new Vector3(), C = new Vector3(), NA = new Vector3(), NB = new Vector3();
@@ -50,10 +69,18 @@ class Builder {
     return this.count++;
   }
   tri(a: number, b: number, c: number) { this.idx.push(a, b, c); }
-  /** Rim quad across the wall thickness between two points on the cut line. */
-  rim(ua: number, aa: number, ub: number, ab: number, solidU: number, solidA: number) {
+  /** Rim quad across the wall thickness between two points on the cut line. `cap` marks a genuine
+   *  open tube end (as opposed to a torn hole or tear, which are already irregular via Sheet.sd())
+   *  and gets a small per-straw imperfection in how it is drawn - see capWarp. */
+  rim(ua: number, aa: number, ub: number, ab: number, solidU: number, solidA: number, cap = false) {
     const sh = this.sheet;
-    sh.pos(ua, aa, 0, A0, NA); sh.pos(ub, ab, 0, B0, NB); sh.pos(ua, aa, -this.t, A1); sh.pos(ub, ab, -this.t, B1);
+    let ua2 = ua, ub2 = ub, ha = 0, hb = 0;
+    if (cap && sh.wrap) {
+      const end = ua + ub < sh.length ? 0 : 1;
+      const wa = capWarp(sh, aa, end), wb = capWarp(sh, ab, end);
+      ua2 = ua + wa.du; ub2 = ub + wb.du; ha = wa.h; hb = wb.h;
+    }
+    sh.pos(ua2, aa, ha, A0, NA); sh.pos(ub2, ab, hb, B0, NB); sh.pos(ua2, aa, ha - this.t, A1); sh.pos(ub2, ab, hb - this.t, B1);
     sh.pos(solidU, solidA, 0, C);
     E1.subVectors(B0, A0); E2.subVectors(B1, A0); G.crossVectors(E1, E2).normalize();
     const flip = G.dot(C.sub(A0)) > 0;
@@ -116,8 +143,8 @@ export function buildSheetGeometries(sheet: Sheet, o: MeshOpts, capStart = false
         b.tri(a, d, bb); b.tri(bb, d, c);
         const a2 = gv(i, j, 1), b2 = gv(i + 1, j, 1), c2 = gv(i + 1, j + 1, 1), d2 = gv(i, j + 1, 1);
         b.tri(a2, b2, d2); b.tri(b2, c2, d2);
-        if (capStart && i0 + i === 0) b.rim(cu[0], ca[0], cu[3], ca[3], cu[1], ca[1]);
-        if (capEnd && i0 + i + 1 === nuTotal) b.rim(cu[1], ca[1], cu[2], ca[2], cu[0], ca[0]);
+        if (capStart && i0 + i === 0) b.rim(cu[0], ca[0], cu[3], ca[3], cu[1], ca[1], true);
+        if (capEnd && i0 + i + 1 === nuTotal) b.rim(cu[1], ca[1], cu[2], ca[2], cu[0], ca[0], true);
         continue;
       }
       // clip the cell against the paper outline

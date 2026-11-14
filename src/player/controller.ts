@@ -33,7 +33,14 @@ export type PlayerEvent = 'jump' | 'land' | 'bump' | 'fall';
  */
 export type FallCause = 'collapse' | 'peel' | 'tear' | 'edge' | 'gap' | 'short' | 'wide' | 'step';
 
-const ACCEL = 7, DECEL = 4.2, BRAKE = 13, LAT_ACCEL = 26, AIR_LAT_ACCEL = 12;
+// Acceleration figures scale with the same `pace` knob as top speed, so the traveller
+// still reaches top speed in the same amount of time at any pace - just a faster one.
+const PACE = CONFIG.difficulty.pace;
+const ACCEL = CONFIG.difficulty.accel * PACE, DECEL = CONFIG.difficulty.decel * PACE, BRAKE = CONFIG.difficulty.brake * PACE;
+const LAT_ACCEL = CONFIG.difficulty.lateralAccel * PACE, AIR_LAT_ACCEL = CONFIG.difficulty.airLateralAccel * PACE;
+// Top running and lateral speeds, paced. Jump and slide speeds are read straight off
+// CONFIG.difficulty below and are intentionally left out of this scaling (see config.ts).
+const MAX_SPEED = CONFIG.difficulty.maxSpeed * PACE, LATERAL_SPEED = CONFIG.difficulty.lateralSpeed * PACE;
 const COYOTE = 0.11, JUMP_BUFFER = 0.14, BODY = 0.24;
 const _n = new Vector3(), _p2 = new Vector3();
 
@@ -85,10 +92,10 @@ export class PlayerController {
       }
     } else if (c.brake > 0) this.vu = Math.max(0, this.vu - BRAKE * c.brake * dt);
     else if (c.forward > 0) {
-      const target = D.maxSpeed * c.forward;
+      const target = MAX_SPEED * c.forward;
       this.vu = this.vu < target ? Math.min(target, this.vu + ACCEL * dt) : Math.max(target, this.vu - DECEL * 1.4 * dt);
     } else this.vu = Math.max(0, this.vu - DECEL * dt);
-    this.va = approach(this.va, D.lateralSpeed * (onSlide ? 0.85 : 1) * c.lateral, (grounded ? LAT_ACCEL : AIR_LAT_ACCEL) * dt);
+    this.va = approach(this.va, LATERAL_SPEED * (onSlide ? 0.85 : 1) * c.lateral, (grounded ? LAT_ACCEL : AIR_LAT_ACCEL) * dt);
 
     // advance, stopping at crushed wall that is too steep to climb (unless already on it)
     let nu = this.u + this.vu * dt, na = this.sheet.wrapA(this.a + this.va * dt);
@@ -122,7 +129,7 @@ export class PlayerController {
         if (this.jumpBuf > 0) {
           this.mode = 'air'; this.vh = D.jumpSpeed; this.h = 0.001; this.jumpBuf = 0; this.coyote = 0;
           // A jump is a leap: leaning forward always carries you a useful distance, even from a standstill.
-          if (c.forward > 0.3 && c.brake === 0) this.vu = Math.max(this.vu, D.maxSpeed * 0.8);
+          if (c.forward > 0.3 && c.brake === 0) this.vu = Math.max(this.vu, MAX_SPEED * 0.8);
           this.events.push('jump');
         } else if (this.s >= finishS) this.mode = 'done';
       }

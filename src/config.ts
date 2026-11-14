@@ -32,38 +32,69 @@ export const CONFIG = {
     ground: '#efe2c8',
   },
 
-  /** Difficulty. Distances in metres, speeds in metres per second. */
+  /**
+   * Difficulty. Distances in metres, speeds in metres per second.
+   *
+   * `pace` is the one knob for "the game feels slow/fast": it scales running
+   * speed, lateral speed and acceleration together, so the traveller stays
+   * coherent at any value. Jumping and sliding are deliberately NOT scaled
+   * by it (see jumpSpeed/slide* below) - they were tuned against the actual
+   * course geometry and a blind multiply would overshoot landings.
+   */
   difficulty: {
-    /** Traveller top running speed. */
+    /** Overall running pace multiplier. 1 = the original pace; 1.12 = +12%. */
+    pace: 1.12,
+    /** Traveller top running speed, before `pace`. */
     maxSpeed: 4.6,
-    /** Speed of travel around the wall. */
+    /** Speed of travel around the wall, before `pace`. */
     lateralSpeed: 4.4,
+    /** Ground/air acceleration, deceleration and braking, before `pace`. Scaled with
+     *  maxSpeed so time-to-top-speed (and the running animation driven by it) stays
+     *  the same feel at the new pace, just faster. */
+    accel: 7, decel: 4.2, brake: 13, lateralAccel: 26, airLateralAccel: 12,
+    /** Jump take-off speed and gravity. Left as-is: jump arcs were tuned against the
+     *  level's actual landings, and the forward boost on take-off already scales with
+     *  maxSpeed, so jumps carry a little further at the new pace without being retuned. */
     jumpSpeed: 5.4,
     gravity: 14.5,
-    /** Slides: speed on the flat, extra speed per unit of slope, the cap, and how much braking can take off. */
+    /** Slides: speed on the flat, extra speed per unit of slope, the cap, and how much braking
+     *  can take off. Left exactly as before - the slide already feels distinct and intentionally
+     *  isn't part of the running-pace change. */
     slideBaseSpeed: 4.4,
     slideSlopeGain: 17,
     slideMaxSpeed: 8.6,
     slideBrake: 0.4,
   },
 
-  /** The unravelling that follows you. */
+  /**
+   * The unravelling that follows you. These are grouped so movement pace (above), chase speed,
+   * starting gap and checkpoint grace can each be read and adjusted on their own line.
+   */
   collapse: {
     /** It starts once this checkpoint (1-based) is reached... */
     startsAtCheckpoint: 1,
-    /** ...this far behind you. */
+    /** ...this far behind you (the starting gap). */
     startDistance: 30,
-    /** Base speed. A steady player averages about 3.6 to 4; top running speed is 4.6. */
-    speed: 3.1,
-    /** If you get further ahead than this it speeds up, smoothly, by up to catchUpBoost. It never jumps forward. */
-    catchUpDistance: 26,
-    catchUpBoost: 1.3,
+    /** Base chase speed. Deliberately a bigger fraction of the new top speed than before
+     *  (was 0.67x maxSpeed; now ~0.76x of the paced maxSpeed) so it catches up more
+     *  decisively instead of just scaling with the player's own faster pace. */
+    speed: 3.9,
+    /** If you get further ahead than this it speeds up, smoothly, by up to catchUpBoost. It never
+     *  jumps forward. Set at the starting gap itself, so a player who just holds a comfortable,
+     *  steady pace (well under top speed) keeps that starting gap rather than slowly losing it -
+     *  only pulling the lead out further triggers extra pressure. speed + catchUpBoost is also
+     *  kept comfortably below the paced maxSpeed, so a player who keeps running flat out can
+     *  never actually be run down. */
+    catchUpDistance: 30,
+    catchUpBoost: 1.1,
     /** When it is this close it eases off a little: tense, never cruel. */
     mercyDistance: 6,
     mercyFactor: 0.85,
-    /** How far behind you it is placed after a respawn, and how long it then waits. */
-    respawnHeadStart: 22,
-    respawnGrace: 1.5,
+    /** How far behind you it is placed after a respawn (checkpoint grace distance), and how
+     *  long it then waits (checkpoint grace time). Both nudged up a little to keep recovery
+     *  fair now that the base chase speed is higher. */
+    respawnHeadStart: 25,
+    respawnGrace: 1.7,
     /** Meter and audio thresholds: the meter starts to fill at meterRange; tearing is audible from warnDistance. */
     meterRange: 30,
     warnDistance: 22,
@@ -76,8 +107,9 @@ export const CONFIG = {
     triggerDistance: 19,
     /** Seconds the seam lifts and rustles before the strip lets go. */
     warnSeconds: 1.3,
-    /** How fast the peel runs along the strip. Faster than you can run, so it always opens ahead of you. */
-    peelSpeed: 9,
+    /** How fast the peel runs along the strip. Kept comfortably faster than the new running
+     *  pace, so it still always opens ahead of you rather than merely keeping up. */
+    peelSpeed: 10,
   },
 
   /** micro:bit tilt defaults (all adjustable in the in-game settings). */

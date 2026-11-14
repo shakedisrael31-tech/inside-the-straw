@@ -227,7 +227,10 @@ export const ENVELOPE: Mark = { sheet: 'END', u: 10.6 };
  */
 export interface RevealDef { from: Mark; to: Mark; back: number; up: number; side: number }
 export const REVEALS: RevealDef[] = [
-  { from: { sheet: 'OPEN', u: 12 }, to: { sheet: 'SL1', u: 9 }, back: 3.0, up: 2.6, side: -2.6 },     // the peeled wall and its slide
+  // the peeled wall and its slide: kept gentler than the other reveals because this one overlaps the
+  // slide's own camera widening (see FollowCamera) - stacking two big offsets here was tilting the
+  // horizon hard and shrinking the traveller right as the slide began
+  { from: { sheet: 'OPEN', u: 12 }, to: { sheet: 'SL1', u: 9 }, back: 1.8, up: 1.7, side: -1.2 },
   { from: { sheet: 'SL1', u: 30 }, to: { sheet: 'P2', u: 3 }, back: 2.0, up: 2.4, side: 1.5 },        // the bundle you are about to land in
   { from: { sheet: 'TR', u: 9 }, to: { sheet: 'WB', u: 5 }, back: 3.0, up: 3.6, side: 2.4 },          // the weave
   { from: { sheet: 'PAD', u: 2 }, to: { sheet: 'PAD', u: 11 }, back: 3.6, up: 3.4, side: -2.6 },      // the stack

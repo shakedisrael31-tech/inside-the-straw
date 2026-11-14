@@ -54,7 +54,13 @@ export class FollowCamera {
     const rate = this.first ? 1e3 : on ? 1.5 : 1.1;
     this.rv.x = damp(this.rv.x, tb, rate, dt); this.rv.y = damp(this.rv.y, tu, rate, dt); this.rv.z = damp(this.rv.z, ts, rate, dt);
     this.rvW = damp(this.rvW, on, rate, dt);
-    const back = lerp(4.6, 6.2, o) + done * 1.0 + sl * 0.9 + this.rv.x, height = lerp(1.8, 2.7, o) + pc.h * 0.35 + sl * 0.5 + this.rv.y, ahead = lerp(6.5, 8, o) + sl * 6;
+    // A reveal and the slide's own widening can land on the same stretch (the peeled-wall reveal
+    // runs right into the slide takeoff). Letting both add in full stacked two big offsets and a
+    // fast-changing "up" into one jarring roll with the traveller shrunk to a speck. Easing the
+    // slide's contribution down while a reveal is live keeps one effect in charge at a time.
+    const slEff = sl * (1 - 0.5 * this.rvW);
+    const back = lerp(4.6, 6.2, o) + done * 1.0 + slEff * 0.9 + this.rv.x, height = lerp(1.8, 2.7, o) + pc.h * 0.35 + slEff * 0.5 + this.rv.y;
+    const ahead = Math.min(11, lerp(6.5, 8, o) + slEff * 6);
 
     r.pos(s - back, pc.a, 0, _eye, _n, sh);
     const camSheet = r.at(s - back), cu = Math.max(0, s - back - camSheet.s0), k = camSheet.curvature(cu);
@@ -85,7 +91,7 @@ export class FollowCamera {
     _m.lookAt(cam.position, this.lookS, _up);
     _q.setFromRotationMatrix(_m);
     if (this.first) cam.quaternion.copy(_q); else cam.quaternion.slerp(_q, 1 - Math.exp(-8 * dt));
-    const fov = lerp(62, 66, o) + sl * 4;
+    const fov = lerp(62, 66, o) + slEff * 4;
     if (Math.abs(cam.fov - fov) > 0.01) { cam.fov = fov; cam.updateProjectionMatrix(); }
     this.first = false;
   }
